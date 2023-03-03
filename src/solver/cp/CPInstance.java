@@ -117,6 +117,48 @@ public class CPInstance
       // Important: Do not change! Keep these parameters as is
       cp.setParameter(IloCP.IntParam.Workers, 1);
       cp.setParameter(IloCP.DoubleParam.TimeLimit, 300);
+    
+      IloIntVar[][] shiftMatrix = new IloIntVar[numEmployees][]; // Which shift each employee does every day
+      IloIntVar[][] startMatrix = new IloIntVar[numEmployees][]; // When an employee starts work each day
+      IloIntVar[][] lengthMatrix = new IloIntVar[numEmployees][]; // How long an employee works every day
+      IloIntVar[][] numWorkersMatrix = new IloIntVar[numDays][numIntervalsInDay]; // How many workers are working at any given time
+      IloTupleSet[][] numWorkersMatrix = new IloIntVar[numDays][numIntervalsInDay]; 
+      // Not sure about this IloTupleSet, but we'll see if its possible to implement this.  Alternatively, we could use flags and sums of 
+      // the other arrays to calculate the number if workers at any given time.  This also reduces the number of values too.
+    
+      for(int i=0; i< shiftMatrix.length; i++){
+        shiftMatrix[i] = cp.intVarArray(numDays, 0, 3);
+        startMatrix[i] = cp.intVarArray(numDays, 0, 20);
+        lengthMatrix[i] = cp.intVarArray(numDays, minConsecutiveWork, maxDailyWork);
+        numWorkersMatrix[i] = cp.intVarArray(numIntervalsInDay, 0, numEmployees);
+      }
+
+
+      for(int i=0; i<numEmployees; i++){
+        //  Here we'll use cp.allDiff() to ensure that for the first 4 days, the employees are always on different shifts.
+        for(int j=0; j<numDays; j++){
+            if(j>=maxConsecutiveNightShift){
+                //if an employee is working a night shift, they cannot have worked one for the past maxConsecutiveNightShift days.
+            }
+            //Here we add a cond
+            cp.add(cp.eq(shiftMatrix[i][j], cp.mod(startMatrix[i][j]), 8)); // Checks that start time is  within their required shift
+            cp.add(cp.eq(shiftMatrix[i][j], cp.mod(cp.add(startMatrix[i][j], lengthMatrix[i][j]), 8))); // Checks that end time is also eithin required shift (need some rounding done (maybe -0.01))
+            // Also not sure whether cp.mod rounds to ints, so might need to cast or something 
+        }
+        for(int i=0; i<(int)numDays%7; i++){
+        // Here we're just handling the condition of workers working between minHours and maxHours a week.
+        // Sum the length matrix for the corresponding 7 days and check that its within the bounds.
+        }
+      }
+
+      for(int i=0; i<numDays; i++){
+        // Get some statement to ensure that a worker is in set[i][j] if and only they are working shift [j] on day [i].
+        // We'll iterate over the tuple for each shift of each day, checking if the ensure that the size of the set is enough
+        // We'll sum the length matrices for each thing in the tuple sets for the entire days and check that its greatere than minDailyOperation
+        // We won't  get duplicates because wee;ve ensured that each employee only works on4 shift a day.
+      }
+
+      
       // cp.setParameter(IloCP.IntParam.SearchType, IloCP.ParameterValues.DepthFirst);   
   
       // Uncomment this: to set the solver output level if you wish

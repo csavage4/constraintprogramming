@@ -1,0 +1,18 @@
+1. 4 possible shifts (numShifts) in total: Off shift = 0 night, day, and evening are denoted by 1, 2, and 3 respectively. The work day is divided into 24-hour intervals where the night shift covers [00:00..08:00), day shift covers [08:00..16:00) and the evening shift covers [16:00-24:00).
+
+2. Shift can end early but the business contract requires employees to work at least 4 consecutive hours once they start a work shift (minConsecutiveWork=4).
+
+3. An employee can only be assigned to a single shift in a day.
+
+4. minimum employees needed every day for every shift. For example, minDemandDayShift[0][2]=4 means that there needs to be at least 4
+employees working for the day shift on the first day.
+
+5. there is a minimum demand of hours that needs to be met to ensure the daily operation (minDailyOperation) for every day when considering all employees and shifts.
+
+6. the first 4 days employees are assigned to unique shifts. (including an off-shift as well) For example if an employee works 8AM..10AM on Day 0, which would be a day shift, then that employee cannot work any hours corresponding to a day shift on Day 1, 2, and 3.However, working 5PM..8PM would be suitable for Day 1 and so on.
+
+7. The labor rules dictate that employees cannot work more than 8 hours per day (maxDailyWork=8).
+
+8. The total number of hours an employee works cannot exceed the standard 40-hours per week and it should not be less than 20-hours (minWeeklyWork, maxWeeklyWork).
+
+9. Night shifts cannot follow each other (maxConsecutiveNightShift=1) and there is a limit on the total number of night shifts that an employee can perform (maxTotalNigthShift).  
