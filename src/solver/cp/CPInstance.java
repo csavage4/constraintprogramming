@@ -117,7 +117,7 @@ public class CPInstance
     return retMat;
   }
 
-  public void solve()
+  public CPResult solve()
   {
     try
     {
@@ -192,7 +192,21 @@ public class CPInstance
       // cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
       if(cp.solve())
       {
+        int[][] begin = new int[numEmployees][numDays];
+        int[][] end = new int[numEmployees][numDays];
+        for(int i=0; i<numEmployees; i++){
+            for(int j=0; j<numDays; j++){
+                if(cp.getValue(shiftMatrix[i][j])==0){
+                    begin[i][j] = -1;
+                    end[i][j] = -1;
+                }else{
+                    begin[i][j] = (int)((cp.getValue(shiftMatrix[i][j])-1)*8.);
+                    end[i][j] = (int)((cp.getValue(shiftMatrix[i][j])-1)*8.+cp.getValue(lengthMatrix[i][j]));
+                }
+            }
+        }
         cp.printInformation();
+        return (new CPResult(numEmployees, numDays, begin, end));
         
         // Uncomment this: for poor man's Gantt Chart to display schedules
         // prettyPrint(numEmployees, numDays, beginED, endED);	
@@ -201,11 +215,13 @@ public class CPInstance
       {
         System.out.println("No Solution found!");
         System.out.println("Number of fails: " + cp.getInfo(IloCP.IntInfo.NumberOfFails));
+        return null;
       }
     }
     catch(IloException e)
     {
       System.out.println("Error: " + e);
+      return null;
     }
   }
 

@@ -29,13 +29,22 @@ public class Main
 	Timer watch = new Timer();
 	watch.start();
 	CPInstance instance = new CPInstance(input);
-	instance.solve();
+	CPResult result = instance.solve();
 	watch.stop();
 
-	System.out.println("{\"Instance\": \"" + filename +
+	System.out.print("{\"Instance\": \"" + filename +
 			"\", \"Time\": " + String.format("%.2f",watch.getTime()) +
-			", \"Result\": \"" + instance.cp.getInfo(IloCP.IntInfo.NumberOfFails) + "\"}");
+			", \"Result\": " + instance.cp.getInfo(IloCP.IntInfo.NumberOfFails) + ", ");
 
+    int[][] begin = result.getBegin();
+    int[][] end = result.getEnd();
+    String str = "";
+    for(int i=0; i<result.getNumE();i++){
+        for(int j=0; j<result.getNumD(); j++){
+            str = str + " " + begin[i][j] + " " + end[i][j];
+        }
+    }
+    System.out.println("\"Solution\": \""+ str.trim() + "\"}");
 					   
     // Timer watch = new Timer();
     // watch.start();
