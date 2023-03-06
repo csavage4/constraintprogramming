@@ -141,15 +141,15 @@ public class CPInstance
 
       for(int i=0; i<numDays; i++){
         for(int j = 0; j < numShifts; j++){
-            IloIntVar[] col = new IloIntVar[shiftMatrix.length];
+            IloIntVar[] col = cp.intVarArray(shiftMatrix.length, 0, 3);
             for(int l = 0; l<shiftMatrix.length; l++){
                 cp.add(cp.eq(col[l], shiftMatrix[l][i]));
             }
             cp.add(cp.ge(cp.count(col, j), minDemandDayShift[i][j]));
         }
-        IloIntVar[] dailyOp = new IloIntVar[numEmployees];
+        IloIntVar[] dailyOp = cp.intVarArray(numEmployees, 0,8);
         for(int k = 0; k< numEmployees; k++){
-            cp.add(cp.eq(dailyOp[k], cp.prod(cp.div(cp(add(shiftMatrix[k][i], 7)),8),lengthMatrix[k][i])));
+            cp.add(cp.eq(dailyOp[k], cp.prod(cp.div(cp.sum(shiftMatrix[k][i], 7),8),lengthMatrix[k][i])));
         }
         cp.add(cp.ge(cp.sum(dailyOp), minDailyOperation));
       }
@@ -157,7 +157,7 @@ public class CPInstance
 
       for(int i=0; i<numEmployees; i++){
         //  Here we'll use cp.allDiff() to ensure that for the first 4 days, the employees are always on different shifts.
-        IloIntVar[] firstFour = new IloIntVar[4];
+        IloIntVar[] firstFour = cp.intVarArray(4,0,3);
         for(int q = 0; q < firstFour.length; q++){
             cp.add(cp.eq(firstFour[q], shiftMatrix[i][q]));
         }
@@ -167,26 +167,22 @@ public class CPInstance
             cp.add(cp.equiv(cp.ge(shiftMatrix[i][j], 1), cp.ge(lengthMatrix[i][j],4)));
             if(j>=maxConsecutiveNightShift){
                 //if an employee is working a night shift, they cannot have worked one for the past maxConsecutiveNightShift days.
-                IloIntVar[] prevShifts = ArrayUtils.subarray(shiftMatrix[i], j-maxConsecutiveNightShift, j+1);
+                IloIntVar[] prevShifts=  cp.intVarArray(maxConsecutiveNightShift+1,0,3);
+                for(int p = 0; p<=maxConsecutiveNightShift; p++){
+                    cp.add(cp.eq(prevShifts[p],shiftMatrix[i][j-p])); 
+                }
                 cp.add(cp.or(cp.neq(cp.max(prevShifts),cp.min(prevShifts)),cp.neq(shiftMatrix[i][j],1)));
             }
         }
         for(int j=0; j<(int)numDays%7; j++){
         // Here we're just handling the condition of workers working between minHours and maxHours a week.
-            IloIntVar[] week = new IloIntVar[7];
+            IloIntVar[] week = cp.intVarArray(7,0,8);
             for(int m = 0; m < week.length; m++){
                 cp.add(cp.eq(week[m], lengthMatrix[i][j*7+m]));
             }
             cp.add(cp.ge(cp.sum(week),minWeeklyWork));
             cp.add(cp.ge(maxWeeklyWork, cp.sum(week)));
         }
-      }
-
-      for(int i=0; i<numDays; i++){
-        // Get some statement to ensure that a worker is in set[i][j] if and only they are working shift [j] on day [i].
-        // We'll iterate over the tuple for each shift of each day, checking if the ensure that the size of the set is enough
-        // We'll sum the length matrices for each thing in the tuple sets for the entire days and check that its greatere than minDailyOperation
-        // We won't  get duplicates because wee;ve ensured that each employee only works on4 shift a day.
       }
 
       

@@ -35,6 +35,7 @@ public class Main
 	System.out.println("{\"Instance\": \"" + filename +
 			"\", \"Time\": " + String.format("%.2f",watch.getTime()) +
 			", \"Result\": \"" + instance.cp.getInfo(IloCP.IntInfo.NumberOfFails) + "\"}");
+
 					   
     // Timer watch = new Timer();
     // watch.start();
