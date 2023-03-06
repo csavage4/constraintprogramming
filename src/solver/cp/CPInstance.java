@@ -9,7 +9,6 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Scanner;
-import org.apache.commons.lang3.ArrayUtils;
 
 public class CPInstance
 {
@@ -107,6 +106,17 @@ public class CPInstance
     }
   }
 
+  public IloIntVar[] getColumn(IloIntVar[][] matrix, int column){
+    if(column>=matrix[0].length){
+        return null;
+    }
+    IloIntVar[] retMat = new IloIntVar[matrix.length];
+    for(int i=0; i<matrix.length; i++){
+        retMat[i] = matrix[i][column];
+    }
+    return retMat;
+  }
+
   public void solve()
   {
     try
@@ -129,28 +139,46 @@ public class CPInstance
         lengthMatrix[i] = cp.intVarArray(numDays, 0, maxDailyWork);
       }
 
+      for(int i=0; i<numDays; i++){
+        for(int j = 0; j < numShifts; j++){
+            IloIntVar[] col = new IloIntVar[shiftMatrix.length];
+            for(int l = 0; l<shiftMatrix.length; l++){
+                cp.add(cp.eq(col[l], shiftMatrix[l][i]));
+            }
+            cp.add(cp.ge(cp.count(col, j), minDemandDayShift[i][j]));
+        }
+        IloIntVar[] dailyOp = new IloIntVar[numEmployees];
+        for(int k = 0; k< numEmployees; k++){
+            cp.add(cp.eq(dailyOp[k], cp.prod(cp.div(cp(add(shiftMatrix[k][i], 7)),8),lengthMatrix[k][i])));
+        }
+        cp.add(cp.ge(cp.sum(dailyOp), minDailyOperation));
+      }
+
 
       for(int i=0; i<numEmployees; i++){
         //  Here we'll use cp.allDiff() to ensure that for the first 4 days, the employees are always on different shifts.
-        IloIntVar[] firstFour = ArrayUtils.subarray(shiftMatrix[i], 0, 4);
+        IloIntVar[] firstFour = new IloIntVar[4];
+        for(int q = 0; q < firstFour.length; q++){
+            cp.add(cp.eq(firstFour[q], shiftMatrix[i][q]));
+        }
         cp.allDiff(firstFour);
         for(int j=0; j<numDays; j++){
             cp.add(cp.equiv(cp.eq(shiftMatrix[i][j], 0), cp.eq(lengthMatrix[i][j],0)));
-            cp.add(cp.equiv(cp.geq(shiftMatrix[i][j], 1), cp.geq(lengthMatrix[i][j],4)));
+            cp.add(cp.equiv(cp.ge(shiftMatrix[i][j], 1), cp.ge(lengthMatrix[i][j],4)));
             if(j>=maxConsecutiveNightShift){
                 //if an employee is working a night shift, they cannot have worked one for the past maxConsecutiveNightShift days.
                 IloIntVar[] prevShifts = ArrayUtils.subarray(shiftMatrix[i], j-maxConsecutiveNightShift, j+1);
-                cp.add(cp.or(cp.neq(cp.maximum(prevShifts),cp.minimum(prevShifts)),cp.neq(shiftMatrix[i][j],1)));
+                cp.add(cp.or(cp.neq(cp.max(prevShifts),cp.min(prevShifts)),cp.neq(shiftMatrix[i][j],1)));
             }
-            //Here we add a cond
-            // Checks that start time is  within their required shift// Checks that end time is also eithin required shift (need some rounding done (maybe -0.01))
-            // Also not sure whether cp.mod rounds to ints, so might need to cast or something 
         }
         for(int j=0; j<(int)numDays%7; j++){
         // Here we're just handling the condition of workers working between minHours and maxHours a week.
-            IloIntVar[] week = ArrayUtils.subarray(lengthMatrix[i], (j*7), (j+1)*7);
+            IloIntVar[] week = new IloIntVar[7];
+            for(int m = 0; m < week.length; m++){
+                cp.add(cp.eq(week[m], lengthMatrix[i][j*7+m]));
+            }
             cp.add(cp.ge(cp.sum(week),minWeeklyWork));
-            cp.add(cp.ge(maxWeeklyWork, cp.sum(week));
+            cp.add(cp.ge(maxWeeklyWork, cp.sum(week)));
         }
       }
 
