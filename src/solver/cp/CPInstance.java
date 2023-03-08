@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.Math;
 import java.util.Scanner;
+
 
 public class CPInstance
 {
@@ -174,7 +176,7 @@ public class CPInstance
                 cp.add(cp.or(cp.neq(cp.max(prevShifts),cp.min(prevShifts)),cp.neq(shiftMatrix[i][j],1)));
             }
         }
-        for(int j=0; j<(int)numDays%7; j++){
+        for(int j=0; j<(int)numDays/7; j++){
         // Here we're just handling the condition of workers working between minHours and maxHours a week.
             IloIntVar[] week = cp.intVarArray(7,0,8);
             for(int m = 0; m < week.length; m++){
@@ -185,12 +187,41 @@ public class CPInstance
         }
       }
 
+      double failLimit = 100;
+      double growth = 1.05;
+
+      cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
       
-      // cp.setParameter(IloCP.IntParam.SearchType, IloCP.ParameterValues.DepthFirst);   
+      cp.setParameter(IloCP.IntParam.SearchType, IloCP.ParameterValues.DepthFirst);  
+      
+      IloVarSelector[] varSelect = new IloVarSelector[2];
+      varSelect[0] = cp.selectSmallest(cp.domainSize());
+      varSelect[1] = cp.selectRandomVar();
+      IloValueSelector minSelect = cp.selectSmallest(cp.value());
+      IloValueSelector maxSelect = cp.selectLargest(cp.value());
+      IloIntValueChooser minChooser = cp.intValueChooser(minSelect);
+      IloIntValueChooser maxChooser = cp.intValueChooser(maxSelect);
+      IloIntVarChooser chooser = cp.intVarChooser(varSelect);
+
+      IloSearchPhase[] phases = new IloSearchPhase[4];
+      phases[0] = cp.searchPhase(this.flatten(shiftMatrix), chooser, minChooser);
+      phases[1] = cp.searchPhase(this.flatten(lengthMatrix), chooser, minChooser);
+      phases[2] = cp.searchPhase(this.flatten(shiftMatrix), chooser, maxChooser);
+      phases[3] = cp.searchPhase(this.flatten(lengthMatrix), chooser, maxChooser);
+      cp.setSearchPhases(phases);
   
       // Uncomment this: to set the solver output level if you wish
-      // cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
-      if(cp.solve())
+      //   cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
+      boolean solved = false;
+      while(!solved){
+        cp.setParameter(IloCP.IntParam.RandomSeed, (int)Math.random()*Integer.MAX_VALUE);
+        failLimit *= growth;
+        System.out.println("Restarting: New Fail Limit is " + failLimit);
+        cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
+        solved = cp.solve();
+      }
+      
+      if(solved)
       {
         int[][] begin = new int[numEmployees][numDays];
         int[][] end = new int[numEmployees][numDays];
@@ -206,10 +237,11 @@ public class CPInstance
             }
         }
         cp.printInformation();
-        return (new CPResult(numEmployees, numDays, begin, end));
         
         // Uncomment this: for poor man's Gantt Chart to display schedules
-        // prettyPrint(numEmployees, numDays, beginED, endED);	
+        prettyPrint(numEmployees, numDays, begin, end);	
+        generateVisualizerInput(numEmployees, numDays, begin, end);
+        return (new CPResult(numEmployees, numDays, begin, end));
       }
       else
       {
@@ -223,6 +255,18 @@ public class CPInstance
       System.out.println("Error: " + e);
       return null;
     }
+  }
+
+  public IloIntVar[] flatten(IloIntVar[][] x){
+    IloIntVar[] x_flat = new IloIntVar[x[0].length * x.length];
+    int index = 0;
+    for(int i = 0; i < x.length; i++){
+        for(int j = 0; j < x[0].length; j++){
+            x_flat[index++] = x[i][j];
+        }
+    }
+
+    return x_flat;
   }
 
   // SK: technically speaking, the model with the global constaints
