@@ -108,13 +108,26 @@ public class CPInstance
     }
   }
 
-  public IloIntVar[] getColumn(IloIntVar[][] matrix, int column){
+  public IloIntVar[] getDay(IloIntVar[][] matrix, int column){
     if(column>=matrix[0].length){
         return null;
     }
     IloIntVar[] retMat = new IloIntVar[matrix.length];
     for(int i=0; i<matrix.length; i++){
         retMat[i] = matrix[i][column];
+    }
+    return retMat;
+  }
+
+  public IloIntVar[][] getWeek(IloIntVar[][] matrix, int week){
+    if(week>=(int)matrix[0].length/7){
+        return null;
+    }
+    IloIntVar[][] retMat = new IloIntVar[matrix.length][7];
+    for(int i = 0; i<7; i++){
+        for(int j=0; j<matrix.length; j++){
+            retMat[j][i] = matrix[j][7*week+i];
+        }
     }
     return retMat;
   }
@@ -186,13 +199,9 @@ public class CPInstance
             cp.add(cp.ge(maxWeeklyWork, cp.sum(week)));
         }
       }
-
-      double failLimit = 100;
-      double growth = 1.05;
-
-      cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
       
       cp.setParameter(IloCP.IntParam.SearchType, IloCP.ParameterValues.DepthFirst);  
+      
       
       IloVarSelector[] varSelect = new IloVarSelector[2];
       varSelect[0] = cp.selectSmallest(cp.domainSize());
@@ -203,25 +212,34 @@ public class CPInstance
       IloIntValueChooser maxChooser = cp.intValueChooser(maxSelect);
       IloIntVarChooser chooser = cp.intVarChooser(varSelect);
 
-      IloSearchPhase[] phases = new IloSearchPhase[4];
-      phases[0] = cp.searchPhase(this.flatten(shiftMatrix), chooser, minChooser);
-      phases[1] = cp.searchPhase(this.flatten(lengthMatrix), chooser, minChooser);
-      phases[2] = cp.searchPhase(this.flatten(shiftMatrix), chooser, maxChooser);
-      phases[3] = cp.searchPhase(this.flatten(lengthMatrix), chooser, maxChooser);
+      IloSearchPhase[] phases = new IloSearchPhase[2*(int)numDays];
+      for(int i = 0; i<(int)numDays/7; i++){
+        for(int j=0; j<7; j++){
+            phases[14*i+j] = cp.searchPhase(this.getDay(shiftMatrix, 7*i+j), chooser, maxChooser);
+            phases[14*i+j+7] = cp.searchPhase(this.getDay(lengthMatrix, 7*i+j), chooser, minChooser);
+        }
+      }
+      cp.setParameter(IloCP.IntParam.RandomSeed, (int)(Math.random()*Integer.MAX_VALUE));
       cp.setSearchPhases(phases);
   
       // Uncomment this: to set the solver output level if you wish
       //   cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
-      boolean solved = false;
-      while(!solved){
-        cp.setParameter(IloCP.IntParam.RandomSeed, (int)Math.random()*Integer.MAX_VALUE);
-        failLimit *= growth;
-        System.out.println("Restarting: New Fail Limit is " + failLimit);
-        cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
-        solved = cp.solve();
-      }
+
+
+    //   double failLimit = 100;
+    //   double growth = 1.05;
+
+    //   cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
+    //   boolean solved = false;
+    //   while(!solved){
+    //     cp.setParameter(IloCP.IntParam.RandomSeed, (int)(Math.random()*Integer.MAX_VALUE));
+    //     failLimit *= growth;
+    //     System.out.println("Restarting: New Fail Limit is " + failLimit);
+    //     cp.setParameter(IloCP.IntParam.FailLimit, (int)failLimit);
+    //     solved = cp.solve();
+    //   }
       
-      if(solved)
+      if(cp.solve())
       {
         int[][] begin = new int[numEmployees][numDays];
         int[][] end = new int[numEmployees][numDays];
