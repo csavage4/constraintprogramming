@@ -222,8 +222,8 @@ public class CPInstance
       cp.setParameter(IloCP.IntParam.RandomSeed, (int)(Math.random()*Integer.MAX_VALUE));
       cp.setSearchPhases(phases);
   
-      // Uncomment this: to set the solver output level if you wish
-      //   cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
+      //Uncomment this: to set the solver output level if you wish
+        //cp.setParameter(IloCP.IntParam.LogVerbosity, IloCP.ParameterValues.Quiet);
 
 
     //   double failLimit = 100;
